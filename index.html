@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日付選択カレンダー</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom smooth transition for toggle */
+        .date-cell {
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 flex flex-col">
+        
+        <!-- Header: Month Navigation & ICS Import with Down Arrow Icon -->
+        <div class="bg-indigo-600 text-white p-6 flex items-center justify-between">
+            <button id="prev-month" class="p-2 rounded-full hover:bg-indigo-700 transition active:scale-95 focus:outline-none" aria-label="前月">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            
+            <div class="flex items-center gap-2">
+                <h1 id="month-title" class="text-xl font-bold tracking-wide">2026年 10月</h1>
+                <!-- ICS File Import Button with Down Arrow -->
+                <label for="ics-file-input" class="cursor-pointer p-2 rounded-full hover:bg-indigo-700 transition active:scale-95 text-indigo-100 hover:text-white" title="ICSファイルをインポート">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </label>
+                <input type="file" id="ics-file-input" accept=".ics" class="hidden">
+            </div>
+
+            <button id="next-month" class="p-2 rounded-full hover:bg-indigo-700 transition active:scale-95 focus:outline-none" aria-label="次月">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 flex-1 flex flex-col">
+            <!-- Day of week headers -->
+            <div class="grid grid-cols-7 gap-2 mb-3 text-center">
+                <div class="text-rose-500 font-semibold text-sm">日</div>
+                <div class="text-slate-600 font-semibold text-sm">月</div>
+                <div class="text-slate-600 font-semibold text-sm">火</div>
+                <div class="text-slate-600 font-semibold text-sm">水</div>
+                <div class="text-slate-600 font-semibold text-sm">木</div>
+                <div class="text-slate-600 font-semibold text-sm">金</div>
+                <div class="text-blue-500 font-semibold text-sm">土</div>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div id="calendar-grid" class="grid grid-cols-7 gap-2 auto-rows-fr">
+                <!-- Dynamically populated by JS -->
+            </div>
+        </div>
+
+        <div class="bg-slate-50 border-t border-slate-100 p-6 flex flex-col gap-3">
+            
+            <!-- Event Title Display Area (Above Selected Dates) -->
+            <div class="flex flex-col gap-1">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">予定タイトル</span>
+                <div id="event-title-text" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 font-medium truncate min-h-[42px] flex items-center shadow-sm">
+                    <span class="text-slate-400 italic">日付を選択してください</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">選択された日付</span>
+                <span id="selected-count" class="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">0件選択</span>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Text display container -->
+                <div id="selected-dates-text" class="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 font-medium truncate select-all min-h-[46px] flex items-center shadow-sm">
+                    <span class="text-slate-400 italic">日付を選択してください</span>
+                </div>
+                
+                <!-- Clipboard Copy Button -->
+                <button id="copy-btn" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-medium px-4 py-3 rounded-xl transition shadow-md hover:shadow-lg flex items-center justify-center shrink-0 focus:outline-none" title="クリップボードにコピー">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-sm font-medium opacity-0 pointer-events-none transition-all duration-300 transform translate-y-4 flex items-center gap-2">
+        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span id="toast-message">クリップボードにコピーしました</span>
+    </div>
+
+    <script>
+        let currentDate = new Date(2026, 9, 1); // October 2026 as initial view
+        let selectedDates = new Set();
+        let icsEventsMap = {}; // Map of 'YYYY-MM-DD' -> array of titles
+        let lastSelectedDateStr = null; // Track last clicked date for title display
+
+        const monthTitle = document.getElementById('month-title');
+        const calendarGrid = document.getElementById('calendar-grid');
+        const selectedDatesText = document.getElementById('selected-dates-text');
+        const eventTitleText = document.getElementById('event-title-text');
+        const selectedCount = document.getElementById('selected-count');
+        const copyBtn = document.getElementById('copy-btn');
+        const prevMonthBtn = document.getElementById('prev-month');
+        const nextMonthBtn = document.getElementById('next-month');
+        const icsFileInput = document.getElementById('ics-file-input');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+
+        // Initialize calendar on window load
+        window.onload = function() {
+            renderCalendar();
+            setupEventListeners();
+        };
+
+        function setupEventListeners() {
+            prevMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            nextMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+
+            copyBtn.addEventListener('click', copyToClipboard);
+            icsFileInput.addEventListener('change', handleIcsUpload);
+        }
+
+        function handleIcsUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    parseIcsData(e.target.result);
+                    showToast("ICSファイルをインポートしました");
+                    renderCalendar(); // Re-render to show red dots on imported event dates
+                } catch (err) {
+                    showToast("ICSファイルの解析に失敗しました", true);
+                }
+                // Reset file input so the same file can be selected again if needed
+                icsFileInput.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function parseIcsData(icsText) {
+            icsEventsMap = {}; // Reset map
+            // Unfold folded lines in ICS (lines starting with space or tab)
+            const unfolded = icsText.replace(/\r\n[ \t]|\n[ \t]/g, '');
+            const lines = unfolded.split(/\r\n|\n|\r/);
+
+            let inEvent = false;
+            let currentSummary = '';
+            let currentStartDate = '';
+
+            for (let line of lines) {
+                line = line.trim();
+                if (line === 'BEGIN:VEVENT') {
+                    inEvent = true;
+                    currentSummary = '';
+                    currentStartDate = '';
+                } else if (line === 'END:VEVENT') {
+                    if (currentStartDate && currentSummary) {
+                        if (!icsEventsMap[currentStartDate]) {
+                            icsEventsMap[currentStartDate] = [];
+                        }
+                        if (!icsEventsMap[currentStartDate].includes(currentSummary)) {
+                            icsEventsMap[currentStartDate].push(currentSummary);
+                        }
+                    }
+                    inEvent = false;
+                } else if (inEvent) {
+                    if (line.startsWith('SUMMARY:')) {
+                        currentSummary = line.substring(8).trim();
+                        // Unescape commas and semicolons in ICS text if necessary
+                        currentSummary = currentSummary.replace(/\\,/g, ',').replace(/\\;/g, ';');
+                    } else if (line.startsWith('DTSTART')) {
+                        const parts = line.split(':');
+                        if (parts.length >= 2) {
+                            const dateVal = parts.slice(1).join(':').trim();
+                            currentStartDate = parseIcsDate(dateVal);
+                        }
+                    }
+                }
+            }
+
+            // If a date was previously selected, update the title display immediately with new data
+            if (lastSelectedDateStr) {
+                updateEventTitleDisplay(lastSelectedDateStr);
+            }
+        }
+
+        function parseIcsDate(dateVal) {
+            dateVal = dateVal.trim();
+            if (dateVal.includes('T')) {
+                const year = parseInt(dateVal.substring(0, 4), 10);
+                const month = parseInt(dateVal.substring(4, 6), 10) - 1;
+                const day = parseInt(dateVal.substring(6, 8), 10);
+                const hour = parseInt(dateVal.substring(9, 11) || 0, 10);
+                const min = parseInt(dateVal.substring(11, 13) || 0, 10);
+                const sec = parseInt(dateVal.substring(13, 15) || 0, 10);
+
+                if (dateVal.endsWith('Z')) {
+                    // UTC time correctly converted to local date
+                    const d = new Date(Date.UTC(year, month, day, hour, min, sec));
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const ds = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${ds}`;
+                } else {
+                    // Local floating time
+                    const y = year;
+                    const m = String(month + 1).padStart(2, '0');
+                    const ds = String(day).padStart(2, '0');
+                    return `${y}-${m}-${ds}`;
+                }
+            } else if (dateVal.length >= 8) {
+                // Pure date VALUE=DATE
+                const year = dateVal.substring(0, 4);
+                const month = dateVal.substring(4, 6);
+                const day = dateVal.substring(6, 8);
+                return `${year}-${month}-${day}`;
+            }
+            return null;
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            // Update Header Title
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+            monthTitle.textContent = `${year}年 ${monthNames[month]}`;
+
+            // Clear previous grid
+            calendarGrid.innerHTML = '';
+
+            // Get first day of the month and total days in month
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            const prevTotalDays = new Date(year, month, 0).getDate();
+
+            // Render padding days from previous month
+            for (let i = firstDayIndex - 1; i >= 0; i--) {
+                const dayNum = prevTotalDays - i;
+                const cell = createDayCell(dayNum, true, null);
+                calendarGrid.appendChild(cell);
+            }
+
+            // Render current month days (ICS import does NOT color dates automatically, but shows red dots)
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isSelected = selectedDates.has(dateStr);
+                const cell = createDayCell(day, false, dateStr, isSelected);
+                calendarGrid.appendChild(cell);
+            }
+
+            // Render remaining days for grid alignment (next month padding)
+            const totalCellsRendered = firstDayIndex + totalDays;
+            const remainingCells = (totalCellsRendered % 7 === 0) ? 0 : 7 - (totalCellsRendered % 7);
+            for (let i = 1; i <= remainingCells; i++) {
+                const cell = createDayCell(i, true, null);
+                calendarGrid.appendChild(cell);
+            }
+
+            updateSelectedDisplay();
+        }
+
+        function createDayCell(dayNumber, isPadding, dateStr, isSelected = false) {
+            const cell = document.createElement('div');
+            cell.className = "aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-medium select-none date-cell relative";
+
+            if (isPadding) {
+                cell.classList.add('text-slate-300', 'cursor-default');
+                const span = document.createElement('span');
+                span.textContent = dayNumber;
+                cell.appendChild(span);
+            } else {
+                cell.classList.add('cursor-pointer');
+
+                if (isSelected) {
+                    cell.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'scale-105');
+                } else {
+                    cell.classList.add('text-slate-700', 'hover:bg-slate-100');
+                }
+
+                // Day number text
+                const span = document.createElement('span');
+                span.textContent = dayNumber;
+                cell.appendChild(span);
+
+                // Small red dot if ICS event exists for this date
+                if (dateStr && icsEventsMap[dateStr] && icsEventsMap[dateStr].length > 0) {
+                    const dot = document.createElement('div');
+                    dot.className = `w-1.5 h-1.5 rounded-full absolute bottom-1.5 ${isSelected ? 'bg-rose-300' : 'bg-rose-500'}`;
+                    cell.appendChild(dot);
+                }
+
+                // Toggle click event and title display update
+                cell.addEventListener('click', () => {
+                    // Toggle selection state
+                    if (selectedDates.has(dateStr)) {
+                        selectedDates.delete(dateStr);
+                    } else {
+                        selectedDates.add(dateStr);
+                    }
+
+                    // Update tracked last selected date and show title
+                    lastSelectedDateStr = dateStr;
+                    updateEventTitleDisplay(dateStr);
+
+                    renderCalendar();
+                });
+            }
+
+            return cell;
+        }
+
+        function updateEventTitleDisplay(dateStr) {
+            if (icsEventsMap[dateStr] && icsEventsMap[dateStr].length > 0) {
+                const titles = icsEventsMap[dateStr].join(', ');
+                eventTitleText.innerHTML = `<span class="text-slate-800 font-semibold">${titles}</span>`;
+            } else {
+                eventTitleText.innerHTML = `<span class="text-slate-400 italic">この日の予定はありません</span>`;
+            }
+        }
+
+        function updateSelectedDisplay() {
+            const sortedDates = Array.from(selectedDates).sort();
+            const dayNumbers = sortedDates.map(dateStr => {
+                const parts = dateStr.split('-');
+                return parseInt(parts[2], 10);
+            });
+
+            if (dayNumbers.length > 0) {
+                selectedDatesText.innerHTML = `<span class="text-slate-800 font-semibold">${dayNumbers.join(',')}</span>`;
+                selectedCount.textContent = `${dayNumbers.length}件選択`;
+            } else {
+                selectedDatesText.innerHTML = `<span class="text-slate-400 italic">日付を選択してください</span>`;
+                selectedCount.textContent = `0件選択`;
+            }
+        }
+
+        function copyToClipboard() {
+            const sortedDates = Array.from(selectedDates).sort();
+            const dayNumbers = sortedDates.map(dateStr => {
+                const parts = dateStr.split('-');
+                return parseInt(parts[2], 10);
+            });
+
+            if (dayNumbers.length === 0) {
+                showToast("コピーする日付がありません", true);
+                return;
+            }
+
+            const textToCopy = dayNumbers.join(',');
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showToast(`「${textToCopy}」をコピーしました`);
+                }).catch(() => {
+                    fallbackCopy(textToCopy);
+                });
+            } else {
+                fallbackCopy(textToCopy);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast(`「${text}」をコピーしました`);
+                } else {
+                    showToast("コピーに失敗しました", true);
+                }
+            } catch (err) {
+                showToast("コピーに失敗しました", true);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message, isError = false) {
+            toastMessage.textContent = message;
+            if (isError) {
+                toast.classList.remove('bg-slate-900');
+                toast.classList.add('bg-rose-600');
+            } else {
+                toast.classList.remove('bg-rose-600');
+                toast.classList.add('bg-slate-900');
+            }
+            
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
