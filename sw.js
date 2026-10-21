@@ -21,7 +21,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(key => key.startsWith("video-rec-pwa-") && key !== CACHE_NAME)
+    await Promise.all(keys.filter(key => key.startsWith("cal-selc-pwa-") && key !== CACHE_NAME)
       .map(key => caches.delete(key)));
     await self.clients.claim();
   })());
