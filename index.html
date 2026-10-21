@@ -9,11 +9,14 @@
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- PWA manifest.jsonの読み込みを追加 -->
-    <link rel="manifest" href="/manifest.json">
+    <!-- 【更新】サブディレクトリや多様な環境（ローカル等）でも正しくマニフェストを読み込めるよう、絶対パスから相対パスへ修正しました -->
+    <link rel="manifest" href="./manifest.json">
     <!-- iOSでのホーム画面追加時に使用するapple-touch-iconを追加 -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <!-- 【更新】iOSでのホーム画面追加時にアイコンを正しく読み込めるよう、絶対パスから相対パスへ修正しました -->
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png">
     <!-- ブラウザタブ用ファビコンとしてicon.svgの読み込みを追加 -->
-    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <!-- 【更新】ブラウザタブ用ファビコンを正しく読み込めるよう、絶対パスから相対パスへ修正しました -->
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -141,7 +144,8 @@
         // Service Worker登録用関数を追加
         function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js')
+                // 【更新】サブディレクトリや多様な環境（ローカル等）でService Workerを正しく登録できるよう、絶対パスから相対パスへ修正しました
+                navigator.serviceWorker.register('./sw.js')
                     .then((reg) => {
                         console.log('Service Worker registered successfully:', reg.scope);
                     })
