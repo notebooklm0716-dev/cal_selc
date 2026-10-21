@@ -1,90 +1,73 @@
-const CACHE = "date-calendar-v2";
-// オフライン時でもアプリが正しく起動・使用できるようにするため、指定された全てのアイコンやマニフェスト、ルートパスをプレキャッシュ対象に更新
-const PRECACHE = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/icon.svg",
-  "/icon-192x192.png",
-  "/icon-512x512.png",
-  "/apple-touch-icon.png",
-  "/maskable-512x512.png"
+const CACHE_NAME = "video-rec-pwa-v2";
+const APP_SHELL = [
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icon.svg",
+  "./icon-192x192.png",
+  "./icon-512x512.png",
+  "./apple-touch-icon.png",
+  "./maskable-512x512.png"
 ];
 
-function shouldBypass(url) {
-  const path = url.pathname;
-  return (
-    path.includes("/@") ||
-    path.startsWith("/src/") ||
-    path.startsWith("/node_modules/") ||
-    path.includes("__vite") ||
-    path.startsWith("/__grok/") ||
-    path.endsWith(".hot-update.js") ||
-    path.endsWith(".hot-update.json") ||
-    path.endsWith("/sw.js")
-  );
-}
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE);
-      await Promise.all(
-        PRECACHE.map(async (path) => {
-          try {
-            const res = await fetch(path, { cache: "reload" });
-            if (res.ok) await cache.put(path, res);
-          } catch {
-            // A missing icon must not block installation of the worker.
-          }
-        }),
-      );
-      await self.skipWaiting();
-    })(),
-  );
+self.addEventListener("install", event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(APP_SHELL);
+    await self.skipWaiting();
+  })());
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)));
-      await self.clients.claim();
-    })(),
-  );
+self.addEventListener("activate", event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key.startsWith("video-rec-pwa-") && key !== CACHE_NAME)
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-  if (req.cache === "only-if-cached" && req.mode !== "same-origin") return;
+self.addEventListener("fetch", event => {
+  const request = event.request;
+  if (request.method !== "GET") return;
 
-  const url = new URL(req.url);
+  const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (shouldBypass(url)) return;
 
-  event.respondWith(networkFirst(req));
-});
-
-async function networkFirst(req) {
-  const cache = await caches.open(CACHE);
-  try {
-    const res = await fetch(req);
-    if (res.ok && res.type === "basic") {
+  if (request.mode === "navigate") {
+    event.respondWith((async () => {
       try {
-        await cache.put(req, res.clone());
-      } catch {
-        // Some responses (partial, opaque) cannot be stored.
+        const response = await fetch(request);
+        if (response && response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put("./index.html", response.clone());
+        }
+        return response;
+      } catch (_) {
+        return (await caches.match(request)) ||
+               (await caches.match("./index.html")) ||
+               new Response("オフラインです。初回にオンラインでアプリを開いてキャッシュしてください。", {
+                 status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" }
+               });
       }
-    }
-    return res;
-  } catch (err) {
-    const hit = await cache.match(req);
-    if (hit) return hit;
-    if (req.mode === "navigate") {
-      const shell = await cache.match("/");
-      if (shell) return shell;
-    }
-    throw err;
+    })());
+    return;
   }
-}
+
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    try {
+      const response = await fetch(request);
+      if (response && response.ok) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(request, response.clone());
+      }
+      return response;
+    } catch (_) {
+      return new Response("このファイルはオフラインキャッシュにありません。", {
+        status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" }
+      });
+    }
+  })());
+});
