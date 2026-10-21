@@ -1,5 +1,15 @@
-const CACHE = "date-calendar-v1";
-const PRECACHE = ["/icon.svg", "/icon-192.png", "/icon-512.png", "/favicon.svg", "/manifest.json"];
+const CACHE = "date-calendar-v2";
+// オフライン時でもアプリが正しく起動・使用できるようにするため、指定された全てのアイコンやマニフェスト、ルートパスをプレキャッシュ対象に更新
+const PRECACHE = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/icon.svg",
+  "/icon-192x192.png",
+  "/icon-512x512.png",
+  "/apple-touch-icon.png",
+  "/maskable-512x512.png"
+];
 
 function shouldBypass(url) {
   const path = url.pathname;

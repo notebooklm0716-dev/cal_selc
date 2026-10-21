@@ -8,6 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- PWA manifest.jsonの読み込みを追加 -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- iOSでのホーム画面追加時に使用するapple-touch-iconを追加 -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <!-- ブラウザタブ用ファビコンとしてicon.svgの読み込みを追加 -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -128,7 +134,22 @@
         window.onload = function() {
             renderCalendar();
             setupEventListeners();
+            // PWAアプリとしてオフラインでも動作させ、キャッシュを有効にするためService Workerの登録処理を追加
+            registerServiceWorker();
         };
+
+        // Service Worker登録用関数を追加
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((reg) => {
+                        console.log('Service Worker registered successfully:', reg.scope);
+                    })
+                    .catch((err) => {
+                        console.error('Service Worker registration failed:', err);
+                    });
+            }
+        }
 
         function setupEventListeners() {
             prevMonthBtn.addEventListener('click', () => {
@@ -397,7 +418,7 @@
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    showToast(`「${text}」をコピーしました`);
+                    showToast(`「${text}` + "をコピーしました");
                 } else {
                     showToast("コピーに失敗しました", true);
                 }
